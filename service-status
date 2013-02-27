@@ -1,0 +1,43 @@
+#! /bin/bash
+
+function service_status {
+local s
+for s  
+do     
+    stopped=$(service $s status)
+    rc=$?
+    case $rc in
+    (0)	running=running	;;
+    (3)	running=stopped	;;
+    (4)	running=unknown	;;
+    (*) running=error  ;;
+    esac
+    echo "service '$s': $running rc=$rc"
+    if (( verbose )) ; then 
+	echo "SERVICE $s status:"
+	echo "$stopped"
+	echo "SERVICE $s (end)"
+	echo
+    fi
+
+done
+}
+
+verbose=0
+runlevel=$( who -r | ( read a b c ; echo $b ) )
+
+while getopts v12345 c; do
+	case $c in
+	(v)	verbose=1;;
+	([1-5])	runlevel=$c;;
+	(*)	echo "option $c"
+	esac
+done
+shift $((OPTIND-1))
+
+Services=$( 
+	chkconfig |  
+	awk -v runlevel=$runlevel 'BEGIN { Match=runlevel":on" }
+	$0 ~ Match { print $1 }' 
+)
+service_status $Services
